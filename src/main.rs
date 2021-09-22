@@ -1,3 +1,5 @@
+use std::io::{BufRead, Write};
+
 use clap::{Clap, AppSettings};
 
 
@@ -11,6 +13,33 @@ struct Opts {
 
 fn main() {
     let opts: Opts = Opts::parse();
+    match opts.file {
+        Some(path) => run_file(path),
+        None => run_prompt(),
+    }
+}
 
-    println!("Value for path: {}", opts.file.or(Some(String::from("none"))).unwrap());
+fn run(line: String) {
+    println!("{}", line);
+}
+
+fn run_file(path: String) {
+    let content = std::fs::read_to_string(path).unwrap();
+    run(content);
+}
+
+fn run_prompt() {
+    let stdin = std::io::stdin();
+    let stdout = std::io::stdout();
+    loop {
+        print!("> ");
+        stdout.lock().flush().unwrap();
+        let mut line = String::new();
+        match stdin.lock().read_line(&mut line) {
+            Ok(0) => break,
+            Ok(_) => (),
+            Err(error) => panic!("{}", error),
+        }
+        run(line);
+    }
 }
