@@ -127,6 +127,43 @@ impl Scanner {
         tokens
     }
 
+    fn parse_number_literal(
+        &self,
+        graphemes_iter: &mut Peekable<Graphemes>,
+        first_digit: &str,
+        current_line: usize,
+    ) -> Token {
+        let mut string = vec![String::from(first_digit)];
+        let mut has_point = first_digit == ".";
+        loop {
+            let grapheme1 = graphemes_iter.next();
+            let grapheme2 = graphemes_iter.peek();
+            let (literal, should_break) = match (grapheme1, grapheme2) {
+                (Some(g1), None) if Scanner::is_digit(g1) => (g1, true),
+                (Some(g1), Some(g2)) if Scanner::is_digit(g1) => (g1, !Scanner::is_digit(g2) && g2 != &"."),
+                (Some("."), g) => {
+                    if has_point {
+                        panic!("Unexpected additional point while parsing number at line {}", current_line);
+                    }
+                    has_point = true;
+                    (".", g.is_none() || !Scanner::is_digit(g.unwrap()))
+                }
+                _ => break, // only whitespace should get here
+            };
+            string.push(String::from(literal));
+            if should_break {
+                break;
+            }
+        }
+        let string = string.concat();
+        Token {
+            kind: TokenKind::Number,
+            lexeme: string.clone(),
+            literal: Some(Box::new(string.parse::<f64>().unwrap())),
+            loc: Loc::single(current_line),
+        }
+    }
+
     fn parse_str_literal(
         &self,
         graphemes_iter: &mut Peekable<Graphemes>,
@@ -180,6 +217,19 @@ impl Scanner {
                 loc: Loc::single(current_line),
             },
             Some("\"") => self.parse_str_literal(graphemes_iter, current_line),
+            Some(l) if Scanner::is_digit(l) => self.parse_number_literal(graphemes_iter, l, current_line),
+            l @ Some(".") => {
+                if grapheme2.is_some() && Scanner::is_digit(grapheme2.unwrap()) {
+                    self.parse_number_literal(graphemes_iter, l.unwrap(), current_line)
+                } else {
+                    Token {
+                        kind: TokenKind::Dot,
+                        lexeme: String::from(l.unwrap()),
+                        literal: None,
+                        loc: Loc::single(current_line),
+                    }
+                }
+            }
             l @ Some(" ") | l @ Some("\r") | l @ Some("\t") => Token {
                 kind: TokenKind::Whitespace,
                 lexeme: String::from(l.unwrap()),
@@ -212,12 +262,6 @@ impl Scanner {
             },
             l @ Some(",") => Token {
                 kind: TokenKind::Comma,
-                lexeme: String::from(l.unwrap()),
-                literal: None,
-                loc: Loc::single(current_line),
-            },
-            l @ Some(".") => Token {
-                kind: TokenKind::Dot,
                 lexeme: String::from(l.unwrap()),
                 literal: None,
                 loc: Loc::single(current_line),
@@ -348,5 +392,12 @@ impl Scanner {
 
     fn consume_line(&self, graphemes_iter: &mut Peekable<Graphemes>) {
         while graphemes_iter.next() != None && graphemes_iter.peek() != Some(&"\n") {}
+    }
+
+    fn is_digit(grapheme: &str) -> bool {
+        match grapheme {
+            "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" => true,
+            _ => false,
+        }
     }
 }
