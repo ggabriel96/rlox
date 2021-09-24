@@ -136,12 +136,13 @@ impl Scanner {
         let mut string = vec![String::from(first_char)];
         while let Some(g) = graphemes_iter.peek() {
             if !Scanner::is_ident_trailing(g) {
-                break
+                break;
             }
             string.push(String::from(graphemes_iter.next().unwrap()));
         }
         let string = string.concat();
-        let kind: TokenKind = Scanner::get_keyword_kind(string.as_str()).unwrap_or(TokenKind::Identifier);
+        let kind: TokenKind =
+            Scanner::get_keyword_kind(string.as_str()).unwrap_or(TokenKind::Identifier);
         Token {
             kind: kind,
             lexeme: string,
@@ -163,10 +164,15 @@ impl Scanner {
             let grapheme2 = graphemes_iter.peek();
             let (literal, should_break) = match (grapheme1, grapheme2) {
                 (Some(g1), None) if Scanner::is_digit(g1) => (g1, true),
-                (Some(g1), Some(g2)) if Scanner::is_digit(g1) => (g1, !Scanner::is_digit(g2) && g2 != &"."),
+                (Some(g1), Some(g2)) if Scanner::is_digit(g1) => {
+                    (g1, !Scanner::is_digit(g2) && g2 != &".")
+                }
                 (Some("."), g) => {
                     if has_point {
-                        panic!("Unexpected additional point while parsing number at line {}", current_line);
+                        panic!(
+                            "Unexpected additional point while parsing number at line {}",
+                            current_line
+                        );
                     }
                     has_point = true;
                     (".", g.is_none() || !Scanner::is_digit(g.unwrap()))
@@ -240,7 +246,9 @@ impl Scanner {
                 loc: Loc::single(current_line),
             },
             Some("\"") => self.parse_str_literal(graphemes_iter, current_line),
-            Some(l) if Scanner::is_digit(l) => self.parse_number_literal(graphemes_iter, l, current_line),
+            Some(l) if Scanner::is_digit(l) => {
+                self.parse_number_literal(graphemes_iter, l, current_line)
+            }
             l @ Some(".") => {
                 if grapheme2.is_some() && Scanner::is_digit(grapheme2.unwrap()) {
                     self.parse_number_literal(graphemes_iter, l.unwrap(), current_line)
