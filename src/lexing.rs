@@ -127,6 +127,29 @@ impl Scanner {
         tokens
     }
 
+    fn parse_identifier(
+        &self,
+        graphemes_iter: &mut Peekable<Graphemes>,
+        first_char: &str,
+        current_line: usize,
+    ) -> Token {
+        let mut string = vec![String::from(first_char)];
+        while let Some(g) = graphemes_iter.peek() {
+            if !Scanner::is_ident_trailing(g) {
+                break
+            }
+            string.push(String::from(graphemes_iter.next().unwrap()));
+        }
+        let string = string.concat();
+        let kind: TokenKind = Scanner::get_keyword_kind(string.as_str()).unwrap_or(TokenKind::Identifier);
+        Token {
+            kind: kind,
+            lexeme: string,
+            literal: None,
+            loc: Loc::single(current_line),
+        }
+    }
+
     fn parse_number_literal(
         &self,
         graphemes_iter: &mut Peekable<Graphemes>,
@@ -229,6 +252,9 @@ impl Scanner {
                         loc: Loc::single(current_line),
                     }
                 }
+            }
+            Some(l) if Scanner::is_ident_start(l) => {
+                self.parse_identifier(graphemes_iter, l, current_line)
             }
             l @ Some(" ") | l @ Some("\r") | l @ Some("\t") => Token {
                 kind: TokenKind::Whitespace,
@@ -394,10 +420,46 @@ impl Scanner {
         while graphemes_iter.next() != None && graphemes_iter.peek() != Some(&"\n") {}
     }
 
+    fn get_keyword_kind(grapheme: &str) -> Option<TokenKind> {
+        match grapheme {
+            "and" => Some(TokenKind::And),
+            "class" => Some(TokenKind::Class),
+            "else" => Some(TokenKind::Else),
+            "false" => Some(TokenKind::False),
+            "for" => Some(TokenKind::For),
+            "fun" => Some(TokenKind::Fun),
+            "if" => Some(TokenKind::If),
+            "nil" => Some(TokenKind::Nil),
+            "or" => Some(TokenKind::Or),
+            "print" => Some(TokenKind::Print),
+            "return" => Some(TokenKind::Return),
+            "super" => Some(TokenKind::Super),
+            "this" => Some(TokenKind::This),
+            "true" => Some(TokenKind::True),
+            "var" => Some(TokenKind::Var),
+            "while" => Some(TokenKind::While),
+            _ => None,
+        }
+    }
+
     fn is_digit(grapheme: &str) -> bool {
         match grapheme {
             "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" => true,
             _ => false,
         }
+    }
+
+    fn is_ident_start(grapheme: &str) -> bool {
+        match grapheme {
+            "_" | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M"
+            | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z" | "a"
+            | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o"
+            | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z" => true,
+            _ => false,
+        }
+    }
+
+    fn is_ident_trailing(grapheme: &str) -> bool {
+        Scanner::is_digit(grapheme) || Scanner::is_ident_start(grapheme)
     }
 }
