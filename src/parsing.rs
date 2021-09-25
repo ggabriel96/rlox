@@ -3,9 +3,13 @@ use crate::lexing::{Token, TokenKind};
 use std::iter::Peekable;
 use std::slice::Iter;
 
-pub fn parse(tokens: &Vec<Token>) -> Expr {
-    let mut it = tokens.iter().peekable();
-    expression(&mut it)
+pub fn parse(tokens: &Vec<Token>) -> Option<Expr> {
+    if !tokens.is_empty() {
+        let mut it = tokens.iter().peekable();
+        Some(expression(&mut it))
+    } else {
+        None
+    }
 }
 
 fn expression(it: &mut Peekable<Iter<Token>>) -> Expr {
@@ -117,6 +121,7 @@ fn primary(it: &mut Peekable<Iter<Token>>) -> Expr {
         },
         Some(Token {
             kind: TokenKind::LeftParen,
+            loc,
             ..
         }) => {
             let expr = expression(it);
@@ -128,7 +133,7 @@ fn primary(it: &mut Peekable<Iter<Token>>) -> Expr {
                 Some(Token { loc, .. }) => {
                     panic!("Expected ')' after expression on line {}", loc.line_end)
                 }
-                None => panic!("Unexpected EOF"), // how to get line number here?
+                None => panic!("Unexpected EOF after '(' on line {}", loc.line_begin),
             }
             Expr::Grouping {
                 expr: Box::new(expr),

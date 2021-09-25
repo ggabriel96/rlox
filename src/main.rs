@@ -26,7 +26,10 @@ fn run(line: String) {
     for tok in tokens.iter() {
         println!("{:?}", tok);
     }
-    println!("{}", parse(&tokens));
+    match parse(&tokens) {
+        Some(expr) => println!("{}", expr),
+        None => (),
+    }
 }
 
 fn run_file(path: String) {
