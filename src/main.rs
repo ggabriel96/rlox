@@ -23,6 +23,9 @@ fn main() {
 fn run(line: String) {
     let mut scanner = Scanner::new(line);
     let tokens = scanner.scan();
+    for tok in tokens.iter() {
+        println!("{:?}", tok);
+    }
     println!("{}", parse(&tokens));
 }
 
