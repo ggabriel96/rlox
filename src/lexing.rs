@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::iter::Peekable;
 use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 
@@ -58,6 +57,12 @@ pub enum TokenKind {
 }
 
 #[derive(Debug)]
+pub enum LiteralValue {
+    Number(f64),
+    String(String),
+}
+
+#[derive(Debug)]
 pub struct Loc {
     pub line_begin: usize,
     pub line_end: usize,
@@ -84,7 +89,7 @@ impl Loc {
 pub struct Token {
     pub kind: TokenKind,
     pub lexeme: String,
-    pub literal: Option<Box<dyn Any>>,
+    pub literal: Option<LiteralValue>,
     pub loc: Loc,
 }
 
@@ -188,7 +193,7 @@ impl Scanner {
         Token {
             kind: TokenKind::Number,
             lexeme: string.clone(),
-            literal: Some(Box::new(string.parse::<f64>().unwrap())),
+            literal: Some(LiteralValue::Number(string.parse::<f64>().unwrap())),
             loc: Loc::single(current_line),
         }
     }
@@ -227,7 +232,7 @@ impl Scanner {
         Token {
             kind: TokenKind::String,
             lexeme: [String::from("\""), string.clone(), String::from("\"")].concat(),
-            literal: Some(Box::new(string)),
+            literal: Some(LiteralValue::String(string)),
             loc: Loc {
                 line_begin: line_begin,
                 line_end: line_current,
