@@ -3,20 +3,29 @@ use crate::lexing::{Token, TokenKind};
 use std::iter::Peekable;
 use std::slice::Iter;
 
+#[derive(Debug)]
+struct ParseError {
+    message: String,
+    token: Token,
+}
+
 pub fn parse(tokens: &Vec<Token>) -> Option<Expr> {
     if !tokens.is_empty() {
         let mut it = tokens.iter().peekable();
-        Some(expression(&mut it))
+        match expression(&mut it) {
+            Ok(expr) => Some(expr),
+            Err(error) => panic!("{:?}", error),
+        }
     } else {
         None
     }
 }
 
-fn expression(it: &mut Peekable<Iter<Token>>) -> Expr {
+fn expression(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     equality(it)
 }
 
-fn equality(it: &mut Peekable<Iter<Token>>) -> Expr {
+fn equality(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     let mut left = comparison(it);
     while let Some(Token {
         kind: TokenKind::BangEqual | TokenKind::EqualEqual,
@@ -25,16 +34,16 @@ fn equality(it: &mut Peekable<Iter<Token>>) -> Expr {
     {
         let op = it.next().unwrap();
         let right = comparison(it);
-        left = Expr::Binary {
-            left: Box::new(left),
+        left = Ok(Expr::Binary {
+            left: Box::new(left?),
             op: op.clone(),
-            right: Box::new(right),
-        };
+            right: Box::new(right?),
+        });
     }
     left
 }
 
-fn comparison(it: &mut Peekable<Iter<Token>>) -> Expr {
+fn comparison(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     let mut left = term(it);
     while let Some(Token {
         kind: TokenKind::Greater | TokenKind::GreaterEqual | TokenKind::Less | TokenKind::LessEqual,
@@ -43,16 +52,16 @@ fn comparison(it: &mut Peekable<Iter<Token>>) -> Expr {
     {
         let op = it.next().unwrap();
         let right = term(it);
-        left = Expr::Binary {
-            left: Box::new(left),
+        left = Ok(Expr::Binary {
+            left: Box::new(left?),
             op: op.clone(),
-            right: Box::new(right),
-        };
+            right: Box::new(right?),
+        });
     }
     left
 }
 
-fn term(it: &mut Peekable<Iter<Token>>) -> Expr {
+fn term(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     let mut left = factor(it);
     while let Some(Token {
         kind: TokenKind::Minus | TokenKind::Plus,
@@ -61,16 +70,16 @@ fn term(it: &mut Peekable<Iter<Token>>) -> Expr {
     {
         let op = it.next().unwrap();
         let right = factor(it);
-        left = Expr::Binary {
-            left: Box::new(left),
+        left = Ok(Expr::Binary {
+            left: Box::new(left?),
             op: op.clone(),
-            right: Box::new(right),
-        };
+            right: Box::new(right?),
+        });
     }
     left
 }
 
-fn factor(it: &mut Peekable<Iter<Token>>) -> Expr {
+fn factor(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     let mut left = unary(it);
     while let Some(Token {
         kind: TokenKind::Slash | TokenKind::Star,
@@ -79,16 +88,16 @@ fn factor(it: &mut Peekable<Iter<Token>>) -> Expr {
     {
         let op = it.next().unwrap();
         let right = unary(it);
-        left = Expr::Binary {
-            left: Box::new(left),
+        left = Ok(Expr::Binary {
+            left: Box::new(left?),
             op: op.clone(),
-            right: Box::new(right),
-        };
+            right: Box::new(right?),
+        });
     }
     left
 }
 
-fn unary(it: &mut Peekable<Iter<Token>>) -> Expr {
+fn unary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     if let Some(Token {
         kind: TokenKind::Bang | TokenKind::Minus,
         ..
@@ -96,16 +105,16 @@ fn unary(it: &mut Peekable<Iter<Token>>) -> Expr {
     {
         let op = it.next().unwrap();
         let right = unary(it);
-        Expr::Unary {
+        Ok(Expr::Unary {
             op: op.clone(),
-            right: Box::new(right),
-        }
+            right: Box::new(right?),
+        })
     } else {
         primary(it)
     }
 }
 
-fn primary(it: &mut Peekable<Iter<Token>>) -> Expr {
+fn primary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     match it.next() {
         Some(Token {
             kind:
@@ -116,33 +125,40 @@ fn primary(it: &mut Peekable<Iter<Token>>) -> Expr {
                 | TokenKind::String,
             literal,
             ..
-        }) => Expr::Literal {
+        }) => Ok(Expr::Literal {
             value: literal.clone(),
-        },
-        Some(Token {
-            kind: TokenKind::LeftParen,
-            loc,
-            ..
-        }) => {
+        }),
+        Some(open_paren) if matches!(open_paren.kind, TokenKind::LeftParen) => {
             let expr = expression(it);
-            match it.peek() {
-                Some(Token {
-                    kind: TokenKind::RightParen,
-                    ..
-                }) => (),
-                Some(Token { loc, .. }) => {
-                    panic!("Expected ')' after expression on line {}", loc.line_end)
-                }
-                None => panic!("Unexpected EOF after '(' on line {}", loc.line_begin),
-            }
-            Expr::Grouping {
-                expr: Box::new(expr),
-            }
+            expect_closing_paren(open_paren, it)?;
+            Ok(Expr::Grouping {
+                expr: Box::new(expr?),
+            })
         }
-        Some(tok) => panic!(
-            "Unexpected token {} at line {}",
-            tok.lexeme, tok.loc.line_begin
-        ),
+        Some(token) => Err(ParseError {
+            message: String::from("Unexpected token"),
+            token: token.clone(),
+        }),
         None => panic!("Unexpected EOF"),
+    }
+}
+
+fn expect_closing_paren(
+    open_paren: &Token,
+    it: &mut Peekable<Iter<Token>>,
+) -> Result<(), ParseError> {
+    match it.next() {
+        Some(Token {
+            kind: TokenKind::RightParen,
+            ..
+        }) => Ok(()),
+        Some(not_close_paren) => Err(ParseError {
+            message: String::from("Expected ')'"),
+            token: not_close_paren.clone(),
+        }),
+        None => Err(ParseError {
+            message: String::from("Expected ')', got EOF"),
+            token: open_paren.clone(),
+        }),
     }
 }
