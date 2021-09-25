@@ -1,5 +1,5 @@
 use crate::expr::Expr;
-use crate::lexing::{LiteralValue, Token, TokenKind};
+use crate::lexing::{Token, TokenKind};
 use std::iter::Peekable;
 use std::slice::Iter;
 
@@ -104,28 +104,12 @@ fn unary(it: &mut Peekable<Iter<Token>>) -> Expr {
 fn primary(it: &mut Peekable<Iter<Token>>) -> Expr {
     match it.next() {
         Some(Token {
-            kind: TokenKind::False,
-            ..
-        }) => Expr::Literal {
-            value: Some(LiteralValue::Bool(false)),
-        },
-        Some(Token {
-            kind: TokenKind::True,
-            ..
-        }) => Expr::Literal {
-            value: Some(LiteralValue::Bool(true)),
-        },
-        Some(Token {
-            kind: TokenKind::Nil,
-            ..
-        }) => Expr::Literal { value: None },
-        Some(Token {
-            kind: TokenKind::Number,
-            literal,
-            ..
-        })
-        | Some(Token {
-            kind: TokenKind::String,
+            kind:
+                TokenKind::False
+                | TokenKind::True
+                | TokenKind::Nil
+                | TokenKind::Number
+                | TokenKind::String,
             literal,
             ..
         }) => Expr::Literal {

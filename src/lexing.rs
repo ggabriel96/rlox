@@ -147,14 +147,7 @@ impl Scanner {
             string.push(String::from(graphemes_iter.next().unwrap()));
         }
         let string = string.concat();
-        let kind: TokenKind =
-            Scanner::get_keyword_kind(string.as_str()).unwrap_or(TokenKind::Identifier);
-        Token {
-            kind: kind,
-            lexeme: string,
-            literal: None,
-            loc: Loc::single(current_line),
-        }
+        Scanner::keyword_or_identifier_token(string.as_str(), current_line)
     }
 
     fn parse_number_literal(
@@ -434,25 +427,36 @@ impl Scanner {
         while graphemes_iter.next() != None && graphemes_iter.peek() != Some(&"\n") {}
     }
 
-    fn get_keyword_kind(grapheme: &str) -> Option<TokenKind> {
-        match grapheme {
-            "and" => Some(TokenKind::And),
-            "class" => Some(TokenKind::Class),
-            "else" => Some(TokenKind::Else),
-            "false" => Some(TokenKind::False),
-            "for" => Some(TokenKind::For),
-            "fun" => Some(TokenKind::Fun),
-            "if" => Some(TokenKind::If),
-            "nil" => Some(TokenKind::Nil),
-            "or" => Some(TokenKind::Or),
-            "print" => Some(TokenKind::Print),
-            "return" => Some(TokenKind::Return),
-            "super" => Some(TokenKind::Super),
-            "this" => Some(TokenKind::This),
-            "true" => Some(TokenKind::True),
-            "var" => Some(TokenKind::Var),
-            "while" => Some(TokenKind::While),
+    fn keyword_or_identifier_token(grapheme: &str, current_line: usize) -> Token {
+        let kind = match grapheme {
+            "and" => TokenKind::And,
+            "class" => TokenKind::Class,
+            "else" => TokenKind::Else,
+            "false" => TokenKind::False,
+            "for" => TokenKind::For,
+            "fun" => TokenKind::Fun,
+            "if" => TokenKind::If,
+            "nil" => TokenKind::Nil,
+            "or" => TokenKind::Or,
+            "print" => TokenKind::Print,
+            "return" => TokenKind::Return,
+            "super" => TokenKind::Super,
+            "this" => TokenKind::This,
+            "true" => TokenKind::True,
+            "var" => TokenKind::Var,
+            "while" => TokenKind::While,
+            _ => TokenKind::Identifier,
+        };
+        let literal = match kind {
+            TokenKind::False => Some(LiteralValue::Bool(false)),
+            TokenKind::True => Some(LiteralValue::Bool(true)),
             _ => None,
+        };
+        Token {
+            kind: kind,
+            lexeme: String::from(grapheme),
+            literal: literal,
+            loc: Loc::single(current_line),
         }
     }
 
