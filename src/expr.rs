@@ -25,6 +25,9 @@ impl std::fmt::Display for Expr {
             Expr::Grouping { expr } => parenthesize(&"group", &[expr]),
             Expr::Literal { value: None } => String::from("nil"),
             Expr::Literal {
+                value: Some(LiteralValue::Bool(b)),
+            } => b.to_string(),
+            Expr::Literal {
                 value: Some(LiteralValue::Number(n)),
             } => n.to_string(),
             Expr::Literal {
