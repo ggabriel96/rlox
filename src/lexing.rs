@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum TokenKind {
     // Single-character tokens
     Comma,
@@ -56,13 +56,13 @@ pub enum TokenKind {
     Whitespace,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum LiteralValue {
     Number(f64),
     String(String),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Loc {
     pub line_begin: usize,
     pub line_end: usize,
@@ -85,7 +85,7 @@ impl Loc {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Token {
     pub kind: TokenKind,
     pub lexeme: String,
