@@ -2,6 +2,7 @@ use std::io::{BufRead, Write};
 
 use clap::{AppSettings, Clap};
 use rlox::lexing::Scanner;
+use rlox::parsing::parse;
 
 #[derive(Clap)]
 #[clap(version = env!("CARGO_PKG_VERSION"), author = env!("CARGO_PKG_AUTHORS"))]
@@ -22,9 +23,7 @@ fn main() {
 fn run(line: String) {
     let mut scanner = Scanner::new(line);
     let tokens = scanner.scan();
-    for tok in tokens {
-        println!("{:?}", tok);
-    }
+    println!("{}", parse(&tokens));
 }
 
 fn run_file(path: String) {
