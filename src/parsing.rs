@@ -4,21 +4,21 @@ use std::iter::Peekable;
 use std::slice::Iter;
 
 #[derive(Debug)]
-pub struct ParseError {
+pub struct ParsingError {
     message: String,
     token: Token,
 }
 
-pub fn parse(tokens: &Vec<Token>) -> Result<Expr, ParseError> {
+pub fn parse(tokens: &Vec<Token>) -> Result<Expr, ParsingError> {
     let mut it = tokens.iter().peekable();
     expression(&mut it)
 }
 
-fn expression(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
+fn expression(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
     equality(it)
 }
 
-fn equality(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
+fn equality(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
     let mut left = comparison(it);
     while let Some(Token {
         kind: TokenKind::BangEqual | TokenKind::EqualEqual,
@@ -36,7 +36,7 @@ fn equality(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     left
 }
 
-fn comparison(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
+fn comparison(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
     let mut left = term(it);
     while let Some(Token {
         kind: TokenKind::Greater | TokenKind::GreaterEqual | TokenKind::Less | TokenKind::LessEqual,
@@ -54,7 +54,7 @@ fn comparison(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     left
 }
 
-fn term(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
+fn term(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
     let mut left = factor(it);
     while let Some(Token {
         kind: TokenKind::Minus | TokenKind::Plus,
@@ -72,7 +72,7 @@ fn term(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     left
 }
 
-fn factor(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
+fn factor(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
     let mut left = unary(it);
     while let Some(Token {
         kind: TokenKind::Slash | TokenKind::Star,
@@ -90,7 +90,7 @@ fn factor(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     left
 }
 
-fn unary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
+fn unary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
     if let Some(Token {
         kind: TokenKind::Bang | TokenKind::Minus,
         ..
@@ -107,7 +107,7 @@ fn unary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     }
 }
 
-fn primary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
+fn primary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
     match it.next() {
         Some(Token {
             kind:
@@ -128,11 +128,11 @@ fn primary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
                 expr: Box::new(expr?),
             })
         }
-        Some(eof) if matches!(eof.kind, TokenKind::Eof) => Err(ParseError {
+        Some(eof) if matches!(eof.kind, TokenKind::Eof) => Err(ParsingError {
             message: String::from("Syntax error: expected primary expression, got EOF"),
             token: eof.clone(),
         }),
-        Some(token) => Err(ParseError {
+        Some(token) => Err(ParsingError {
             message: String::from("Syntax error: unexpected token"),
             token: token.clone(),
         }),
@@ -140,13 +140,13 @@ fn primary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
     }
 }
 
-fn expect_closing_paren(it: &mut Peekable<Iter<Token>>) -> Result<(), ParseError> {
+fn expect_closing_paren(it: &mut Peekable<Iter<Token>>) -> Result<(), ParsingError> {
     match it.next() {
         Some(Token {
             kind: TokenKind::RightParen,
             ..
         }) => Ok(()),
-        Some(not_close_paren) => Err(ParseError {
+        Some(not_close_paren) => Err(ParsingError {
             message: String::from("Syntax error: expected ')'"),
             token: not_close_paren.clone(),
         }),
