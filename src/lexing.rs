@@ -86,6 +86,13 @@ impl Loc {
     }
 }
 
+#[derive(Debug)]
+pub struct LexingError {
+    message: String,
+    lexeme: Option<String>,
+    loc: Loc,
+}
+
 #[derive(Clone, Debug)]
 pub struct Token {
     pub kind: TokenKind,
@@ -104,12 +111,12 @@ impl Scanner {
         Scanner { source: source }
     }
 
-    pub fn scan(&mut self) -> Vec<Token> {
+    pub fn scan(&mut self) -> Result<Vec<Token>, LexingError> {
         let mut current_line: usize = 1;
         let mut graphemes_iter = self.source.graphemes(true).peekable();
         let mut tokens: Vec<Token> = Vec::new();
         loop {
-            match self.parse_token(&mut graphemes_iter, current_line) {
+            match self.parse_token(&mut graphemes_iter, current_line)? {
                 Token {
                     kind: TokenKind::Whitespace,
                     ..
@@ -134,7 +141,7 @@ impl Scanner {
                 }
             }
         }
-        tokens
+        Ok(tokens)
     }
 
     fn parse_identifier(
@@ -159,7 +166,7 @@ impl Scanner {
         graphemes_iter: &mut Peekable<Graphemes>,
         first_digit: &str,
         current_line: usize,
-    ) -> Token {
+    ) -> Result<Token, LexingError> {
         let mut string = vec![String::from(first_digit)];
         let mut has_point = first_digit == ".";
         loop {
@@ -172,10 +179,13 @@ impl Scanner {
                 }
                 (Some("."), g) => {
                     if has_point {
-                        panic!(
-                            "Unexpected additional point while parsing number at line {}",
-                            current_line
-                        );
+                        return Err(LexingError {
+                            message: String::from(
+                                "Unexpected additional point while parsing number at line {}",
+                            ),
+                            lexeme: Some(String::from(".")),
+                            loc: Loc::single(current_line),
+                        });
                     }
                     has_point = true;
                     (".", g.is_none() || !Scanner::is_digit(g.unwrap()))
@@ -188,29 +198,32 @@ impl Scanner {
             }
         }
         let string = string.concat();
-        Token {
+        Ok(Token {
             kind: TokenKind::Number,
             lexeme: string.clone(),
             literal: Some(LiteralValue::Number(string.parse::<f64>().unwrap())),
             loc: Loc::single(current_line),
-        }
+        })
     }
 
     fn parse_str_literal(
         &self,
         graphemes_iter: &mut Peekable<Graphemes>,
         line_begin: usize,
-    ) -> Token {
+    ) -> Result<Token, LexingError> {
         let mut line_current = line_begin;
         let mut string: Vec<String> = Vec::new();
         loop {
             let grapheme1 = graphemes_iter.next();
             let grapheme2 = graphemes_iter.peek();
             let literal = match (grapheme1, grapheme2) {
-                (None, _) => panic!(
-                    "Unexpected EOF in unterminated string at line {}",
-                    line_current,
-                ),
+                (Some("\n"), None) | (None, _) => {
+                    return Err(LexingError {
+                        message: String::from("Unexpected EOF in unterminated string"),
+                        lexeme: None,
+                        loc: Loc::single(line_current),
+                    })
+                }
                 (Some("\\"), Some(&"\"")) => {
                     graphemes_iter.next();
                     "\\\""
@@ -227,7 +240,7 @@ impl Scanner {
             string.push(String::from(literal));
         }
         let string = string.concat();
-        Token {
+        Ok(Token {
             kind: TokenKind::String,
             lexeme: [String::from("\""), string.clone(), String::from("\"")].concat(),
             literal: Some(LiteralValue::String(string)),
@@ -235,26 +248,30 @@ impl Scanner {
                 line_begin: line_begin,
                 line_end: line_current,
             },
-        }
+        })
     }
 
-    fn parse_token(&self, graphemes_iter: &mut Peekable<Graphemes>, current_line: usize) -> Token {
+    fn parse_token(
+        &self,
+        graphemes_iter: &mut Peekable<Graphemes>,
+        current_line: usize,
+    ) -> Result<Token, LexingError> {
         let grapheme1 = graphemes_iter.next();
         let grapheme2 = graphemes_iter.peek();
-        match grapheme1 {
+        let token = match grapheme1 {
             None => Token {
                 kind: TokenKind::Eof,
                 lexeme: String::from("\0"),
                 literal: None,
                 loc: Loc::single(current_line),
             },
-            Some("\"") => self.parse_str_literal(graphemes_iter, current_line),
+            Some("\"") => self.parse_str_literal(graphemes_iter, current_line)?,
             Some(l) if Scanner::is_digit(l) => {
-                self.parse_number_literal(graphemes_iter, l, current_line)
+                self.parse_number_literal(graphemes_iter, l, current_line)?
             }
             l @ Some(".") => {
                 if grapheme2.is_some() && Scanner::is_digit(grapheme2.unwrap()) {
-                    self.parse_number_literal(graphemes_iter, l.unwrap(), current_line)
+                    self.parse_number_literal(graphemes_iter, l.unwrap(), current_line)?
                 } else {
                     Token {
                         kind: TokenKind::Dot,
@@ -423,8 +440,15 @@ impl Scanner {
                     }
                 }
             }
-            Some(uk) => panic!("unknown token `{}` at line {}", uk, current_line),
-        }
+            Some(uk) => {
+                return Err(LexingError {
+                    message: String::from("Unknown token"),
+                    lexeme: Some(String::from(uk)),
+                    loc: Loc::single(current_line),
+                })
+            }
+        };
+        Ok(token)
     }
 
     fn consume_line(&self, graphemes_iter: &mut Peekable<Graphemes>) {

@@ -22,12 +22,16 @@ fn main() {
 
 fn run(line: String) {
     let mut scanner = Scanner::new(line);
-    let tokens = scanner.scan();
-    for tok in tokens.iter() {
-        println!("{:?}", tok);
-    }
-    match parse(&tokens) {
-        Ok(expr) => println!("{}", expr),
+    match scanner.scan() {
+        Ok(tokens) => {
+            for tok in tokens.iter() {
+                println!("{:?}", tok);
+            }
+            match parse(&tokens) {
+                Ok(expr) => println!("{}", expr),
+                Err(error) => eprintln!("{:?}", error),
+            }
+        }
         Err(error) => eprintln!("{:?}", error),
     }
 }
