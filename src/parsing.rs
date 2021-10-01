@@ -19,75 +19,75 @@ fn expression(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
 }
 
 fn equality(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
-    let mut left = comparison(it);
+    let mut left = comparison(it)?;
     while let Some(Token {
         kind: TokenKind::BangEqual | TokenKind::EqualEqual,
         ..
     }) = it.peek()
     {
         let op = it.next().unwrap();
-        let right = comparison(it);
-        left = Ok(Expr::Binary {
-            left: Box::new(left?),
+        let right = comparison(it)?;
+        left = Expr::Binary {
+            left: Box::new(left),
             op: op.clone(),
-            right: Box::new(right?),
-        });
+            right: Box::new(right),
+        };
     }
-    left
+    Ok(left)
 }
 
 fn comparison(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
-    let mut left = term(it);
+    let mut left = term(it)?;
     while let Some(Token {
         kind: TokenKind::Greater | TokenKind::GreaterEqual | TokenKind::Less | TokenKind::LessEqual,
         ..
     }) = it.peek()
     {
         let op = it.next().unwrap();
-        let right = term(it);
-        left = Ok(Expr::Binary {
-            left: Box::new(left?),
+        let right = term(it)?;
+        left = Expr::Binary {
+            left: Box::new(left),
             op: op.clone(),
-            right: Box::new(right?),
-        });
+            right: Box::new(right),
+        };
     }
-    left
+    Ok(left)
 }
 
 fn term(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
-    let mut left = factor(it);
+    let mut left = factor(it)?;
     while let Some(Token {
         kind: TokenKind::Minus | TokenKind::Plus,
         ..
     }) = it.peek()
     {
         let op = it.next().unwrap();
-        let right = factor(it);
-        left = Ok(Expr::Binary {
-            left: Box::new(left?),
+        let right = factor(it)?;
+        left = Expr::Binary {
+            left: Box::new(left),
             op: op.clone(),
-            right: Box::new(right?),
-        });
+            right: Box::new(right),
+        };
     }
-    left
+    Ok(left)
 }
 
 fn factor(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
-    let mut left = unary(it);
+    let mut left = unary(it)?;
     while let Some(Token {
         kind: TokenKind::Slash | TokenKind::Star,
         ..
     }) = it.peek()
     {
         let op = it.next().unwrap();
-        let right = unary(it);
-        left = Ok(Expr::Binary {
-            left: Box::new(left?),
+        let right = unary(it)?;
+        left = Expr::Binary {
+            left: Box::new(left),
             op: op.clone(),
-            right: Box::new(right?),
-        });
+            right: Box::new(right),
+        };
     }
-    left
+    Ok(left)
 }
 
 fn unary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
@@ -97,10 +97,10 @@ fn unary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
     }) = it.peek()
     {
         let op = it.next().unwrap();
-        let right = unary(it);
+        let right = unary(it)?;
         Ok(Expr::Unary {
             op: op.clone(),
-            right: Box::new(right?),
+            right: Box::new(right),
         })
     } else {
         primary(it)
