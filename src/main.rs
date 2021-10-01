@@ -27,9 +27,11 @@ fn run(line: String) {
             for tok in tokens.iter() {
                 println!("{:?}", tok);
             }
-            match parse(&tokens) {
-                Ok(expr) => println!("{}", expr),
-                Err(error) => eprintln!("{:?}", error),
+            if tokens.len() > 1 {
+                match parse(&tokens) {
+                    Ok(expr) => println!("{}", expr),
+                    Err(error) => eprintln!("{:?}", error),
+                }
             }
         }
         Err(error) => eprintln!("{:?}", error),
