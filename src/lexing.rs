@@ -108,7 +108,7 @@ impl Scanner {
         let mut current_line: usize = 1;
         let mut graphemes_iter = self.source.graphemes(true).peekable();
         let mut tokens: Vec<Token> = Vec::new();
-        while !graphemes_iter.peek().is_none() {
+        loop {
             match self.parse_token(&mut graphemes_iter, current_line) {
                 Token {
                     kind: TokenKind::Whitespace,
@@ -126,7 +126,11 @@ impl Scanner {
                     if !tok.loc.is_single() {
                         current_line += tok.loc.offset();
                     }
+                    let kind = tok.kind.clone();
                     tokens.push(tok);
+                    if matches!(kind, TokenKind::Eof) {
+                        break;
+                    }
                 }
             }
         }
