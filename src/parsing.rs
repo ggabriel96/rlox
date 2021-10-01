@@ -122,10 +122,10 @@ fn primary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
             value: literal.clone(),
         }),
         Some(open_paren) if matches!(open_paren.kind, TokenKind::LeftParen) => {
-            let expr = expression(it);
+            let expr = expression(it)?;
             expect_closing_paren(it)?;
             Ok(Expr::Grouping {
-                expr: Box::new(expr?),
+                expr: Box::new(expr),
             })
         }
         Some(eof) if matches!(eof.kind, TokenKind::Eof) => Err(ParsingError {
