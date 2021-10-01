@@ -27,8 +27,8 @@ fn run(line: String) {
         println!("{:?}", tok);
     }
     match parse(&tokens) {
-        Some(expr) => println!("{}", expr),
-        None => (),
+        Ok(expr) => println!("{}", expr),
+        Err(error) => eprintln!("{:?}", error),
     }
 }
 

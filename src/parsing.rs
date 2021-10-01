@@ -4,21 +4,14 @@ use std::iter::Peekable;
 use std::slice::Iter;
 
 #[derive(Debug)]
-struct ParseError {
+pub struct ParseError {
     message: String,
     token: Token,
 }
 
-pub fn parse(tokens: &Vec<Token>) -> Option<Expr> {
-    if !tokens.is_empty() {
-        let mut it = tokens.iter().peekable();
-        match expression(&mut it) {
-            Ok(expr) => Some(expr),
-            Err(error) => panic!("{:?}", error),
-        }
-    } else {
-        None
-    }
+pub fn parse(tokens: &Vec<Token>) -> Result<Expr, ParseError> {
+    let mut it = tokens.iter().peekable();
+    expression(&mut it)
 }
 
 fn expression(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
@@ -130,35 +123,33 @@ fn primary(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParseError> {
         }),
         Some(open_paren) if matches!(open_paren.kind, TokenKind::LeftParen) => {
             let expr = expression(it);
-            expect_closing_paren(open_paren, it)?;
+            expect_closing_paren(it)?;
             Ok(Expr::Grouping {
                 expr: Box::new(expr?),
             })
         }
+        Some(eof) if matches!(eof.kind, TokenKind::Eof) => Err(ParseError {
+            message: String::from("Syntax error: expected primary expression, got EOF"),
+            token: eof.clone(),
+        }),
         Some(token) => Err(ParseError {
-            message: String::from("Unexpected token"),
+            message: String::from("Syntax error: unexpected token"),
             token: token.clone(),
         }),
-        None => panic!("Unexpected EOF"),
+        None => panic!("Unexpected end of tokens. This is a bug."),
     }
 }
 
-fn expect_closing_paren(
-    open_paren: &Token,
-    it: &mut Peekable<Iter<Token>>,
-) -> Result<(), ParseError> {
+fn expect_closing_paren(it: &mut Peekable<Iter<Token>>) -> Result<(), ParseError> {
     match it.next() {
         Some(Token {
             kind: TokenKind::RightParen,
             ..
         }) => Ok(()),
         Some(not_close_paren) => Err(ParseError {
-            message: String::from("Expected ')'"),
+            message: String::from("Syntax error: expected ')'"),
             token: not_close_paren.clone(),
         }),
-        None => Err(ParseError {
-            message: String::from("Expected ')', got EOF"),
-            token: open_paren.clone(),
-        }),
+        None => panic!("Unexpected end of tokens. This is a bug."),
     }
 }
