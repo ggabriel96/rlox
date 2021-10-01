@@ -170,14 +170,9 @@ impl Scanner {
         let mut string = vec![String::from(first_digit)];
         let mut has_point = first_digit == ".";
         loop {
-            let grapheme1 = graphemes_iter.next();
-            let grapheme2 = graphemes_iter.peek();
-            let (literal, should_break) = match (grapheme1, grapheme2) {
-                (Some(g1), None) if Scanner::is_digit(g1) => (g1, true),
-                (Some(g1), Some(g2)) if Scanner::is_digit(g1) => {
-                    (g1, !Scanner::is_digit(g2) && g2 != &".")
-                }
-                (Some("."), g) => {
+            let literal = match graphemes_iter.peek() {
+                Some(g) if Scanner::is_digit(g) => graphemes_iter.next().unwrap(),
+                Some(&".") => {
                     if has_point {
                         return Err(LexingError {
                             message: String::from(
@@ -188,14 +183,11 @@ impl Scanner {
                         });
                     }
                     has_point = true;
-                    (".", g.is_none() || !Scanner::is_digit(g.unwrap()))
+                    graphemes_iter.next().unwrap()
                 }
-                _ => break, // only whitespace should get here
+                _ => break,
             };
             string.push(String::from(literal));
-            if should_break {
-                break;
-            }
         }
         let string = string.concat();
         Ok(Token {
