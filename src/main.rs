@@ -25,13 +25,13 @@ fn run(line: String) {
     let mut scanner = Scanner::new(line);
     match scanner.scan() {
         Ok(tokens) => {
-            for tok in tokens.iter() {
-                println!("{:?}", tok);
-            }
+            // for tok in tokens.iter() {
+            //     println!("{:?}", tok);
+            // }
             if tokens.len() > 1 {
                 match parse(&tokens) {
                     Ok(expr) => {
-                        println!("{}", expr);
+                        // println!("{}", expr);
                         match execute(expr) {
                             Ok(result) => println!("{}", stringify(result)),
                             Err(runtime_error) => eprintln!("{:?}", runtime_error),
