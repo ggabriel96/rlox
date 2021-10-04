@@ -1,5 +1,6 @@
 use crate::expr::Expr;
 use crate::lexing::{Token, TokenKind};
+use crate::stmt::Stmt;
 use std::iter::Peekable;
 use std::slice::Iter;
 
@@ -9,9 +10,39 @@ pub struct ParsingError {
     token: Token,
 }
 
-pub fn parse(tokens: &Vec<Token>) -> Result<Expr, ParsingError> {
+pub fn parse(tokens: &Vec<Token>) -> Result<Vec<Stmt>, ParsingError> {
     let mut it = tokens.iter().peekable();
-    expression(&mut it)
+    let mut statements: Vec<Stmt> = vec![];
+    loop {
+        let stmt = match it.peek() {
+            Some(Token {
+                kind: TokenKind::Eof,
+                ..
+            }) => break,
+            Some(Token {
+                kind: TokenKind::Print,
+                ..
+            }) => {
+                it.next(); // consume the peeked print token
+                print_statement(&mut it)
+            }
+            _ => expression_statement(&mut it),
+        };
+        statements.push(stmt?);
+    }
+    Ok(statements)
+}
+
+fn expression_statement(it: &mut Peekable<Iter<Token>>) -> Result<Stmt, ParsingError> {
+    let expr = expression(it)?;
+    expect_semicolon(it)?;
+    Ok(Stmt::Expr(expr))
+}
+
+fn print_statement(it: &mut Peekable<Iter<Token>>) -> Result<Stmt, ParsingError> {
+    let expr = expression(it)?;
+    expect_semicolon(it)?;
+    Ok(Stmt::Print(expr))
 }
 
 fn expression(it: &mut Peekable<Iter<Token>>) -> Result<Expr, ParsingError> {
@@ -149,6 +180,20 @@ fn expect_closing_paren(it: &mut Peekable<Iter<Token>>) -> Result<(), ParsingErr
         Some(not_close_paren) => Err(ParsingError {
             message: String::from("Syntax error: expected ')'"),
             token: not_close_paren.clone(),
+        }),
+        None => panic!("Unexpected end of tokens. This is a bug."),
+    }
+}
+
+fn expect_semicolon(it: &mut Peekable<Iter<Token>>) -> Result<(), ParsingError> {
+    match it.next() {
+        Some(Token {
+            kind: TokenKind::Semicolon,
+            ..
+        }) => Ok(()),
+        Some(not_semicolon) => Err(ParsingError {
+            message: String::from("Syntax error: expected ';'"),
+            token: not_semicolon.clone(),
         }),
         None => panic!("Unexpected end of tokens. This is a bug."),
     }

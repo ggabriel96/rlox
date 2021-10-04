@@ -1,7 +1,7 @@
 use std::io::{BufRead, Write};
 
 use clap::{AppSettings, Clap};
-use rlox::interpreter::{execute, stringify};
+use rlox::interpreter::interpret;
 use rlox::lexing::Scanner;
 use rlox::parsing::parse;
 
@@ -30,10 +30,10 @@ fn run(line: String) {
             // }
             if tokens.len() > 1 {
                 match parse(&tokens) {
-                    Ok(expr) => {
-                        // println!("{}", expr);
-                        match execute(expr) {
-                            Ok(result) => println!("{}", stringify(result)),
+                    Ok(statements) => {
+                        // println!("{:?}", statements);
+                        match interpret(statements) {
+                            Ok(()) => (),
                             Err(runtime_error) => eprintln!("{:?}", runtime_error),
                         }
                     }

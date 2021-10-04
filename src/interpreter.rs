@@ -1,5 +1,6 @@
 use crate::expr::Expr;
 use crate::lexing::{LiteralValue, Loc, Token, TokenKind};
+use crate::stmt::Stmt;
 
 #[derive(Debug)]
 pub struct RuntimeError {
@@ -7,11 +8,30 @@ pub struct RuntimeError {
     loc: Loc,
 }
 
-pub fn execute(expr: Expr) -> Result<Option<LiteralValue>, RuntimeError> {
+pub fn interpret(statements: Vec<Stmt>) -> Result<(), RuntimeError> {
+    for stmt in statements {
+        execute(stmt)?
+    }
+    Ok(())
+}
+
+pub fn execute(stmt: Stmt) -> Result<(), RuntimeError> {
+    match stmt {
+        Stmt::Expr(expr) => evaluate(expr)?,
+        Stmt::Print(expr) => {
+            let value = evaluate(expr)?;
+            println!("{}", stringify(value));
+            None
+        }
+    };
+    Ok(())
+}
+
+pub fn evaluate(expr: Expr) -> Result<Option<LiteralValue>, RuntimeError> {
     match expr {
         Expr::Binary { left, op, right } => {
-            let left = execute(*left)?;
-            let right = execute(*right)?;
+            let left = evaluate(*left)?;
+            let right = evaluate(*right)?;
             match op.kind {
                 TokenKind::BangEqual => Ok(Some(LiteralValue::Bool(!is_equal(left, right)))),
                 TokenKind::EqualEqual => Ok(Some(LiteralValue::Bool(is_equal(left, right)))),
@@ -64,10 +84,10 @@ pub fn execute(expr: Expr) -> Result<Option<LiteralValue>, RuntimeError> {
                 }),
             }
         }
-        Expr::Grouping { expr } => execute(*expr),
+        Expr::Grouping { expr } => evaluate(*expr),
         Expr::Literal { value } => Ok(value),
         Expr::Unary { op, right } => {
-            let right = execute(*right)?;
+            let right = evaluate(*right)?;
             match op {
                 Token {
                     kind: TokenKind::Minus,

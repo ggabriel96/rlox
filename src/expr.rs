@@ -1,5 +1,6 @@
 use crate::lexing::{LiteralValue, Token};
 
+#[derive(Debug)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
