@@ -15,7 +15,7 @@ pub fn interpret(statements: Vec<Stmt>) -> Result<(), RuntimeError> {
     Ok(())
 }
 
-pub fn execute(stmt: Stmt) -> Result<(), RuntimeError> {
+fn execute(stmt: Stmt) -> Result<(), RuntimeError> {
     match stmt {
         Stmt::Expr(expr) => evaluate(expr)?,
         Stmt::Print(expr) => {
@@ -27,7 +27,7 @@ pub fn execute(stmt: Stmt) -> Result<(), RuntimeError> {
     Ok(())
 }
 
-pub fn evaluate(expr: Expr) -> Result<Option<LiteralValue>, RuntimeError> {
+fn evaluate(expr: Expr) -> Result<Option<LiteralValue>, RuntimeError> {
     match expr {
         Expr::Binary { left, op, right } => {
             let left = evaluate(*left)?;
@@ -109,15 +109,6 @@ pub fn evaluate(expr: Expr) -> Result<Option<LiteralValue>, RuntimeError> {
     }
 }
 
-pub fn stringify(value: Option<LiteralValue>) -> String {
-    match value {
-        None => String::from("nil"),
-        Some(LiteralValue::Bool(b)) => b.to_string(),
-        Some(LiteralValue::Number(n)) => n.to_string(),
-        Some(LiteralValue::String(s)) => s,
-    }
-}
-
 fn expect_number(op: Token, rhs: Option<LiteralValue>) -> Result<f64, RuntimeError> {
     match rhs {
         Some(LiteralValue::Number(rhs)) => Ok(rhs),
@@ -155,5 +146,14 @@ fn is_truthy(expr: Option<LiteralValue>) -> bool {
         Some(LiteralValue::Bool(boolean)) => boolean,
         None => false,
         _ => true,
+    }
+}
+
+fn stringify(value: Option<LiteralValue>) -> String {
+    match value {
+        None => String::from("nil"),
+        Some(LiteralValue::Bool(b)) => b.to_string(),
+        Some(LiteralValue::Number(n)) => n.to_string(),
+        Some(LiteralValue::String(s)) => s,
     }
 }
